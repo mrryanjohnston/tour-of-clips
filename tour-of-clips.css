@@ -1,0 +1,215 @@
+a {
+  color: #006600;
+}
+
+body {
+  color: #111;
+  font-family: sans-serif;
+  margin: 15px auto;
+  padding: 15px;
+}
+
+code {
+  background-color: #f6f8fa;
+  font-size: 12pt;
+  padding: 0.2em 0.4em;
+}
+
+ol, p, ul {
+  font-size: 14pt;
+  line-height: 1.5em;
+}
+
+.input, .output {
+  color: #000;
+  font-size: 12pt;
+  min-height: 82pt;
+  overflow: auto;
+}
+
+pre code {
+  background-color: inherit;
+  line-height: 1.5em;
+}
+
+#timeline img {
+  display: block;
+  margin: 0 auto 25px;
+}
+
+li {
+  margin-top: 20px;
+}
+
+#controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+#controls div {
+  width: 50%;
+}
+
+#controls button {
+  cursor: pointer;
+}
+
+#controls #batchStarWrapper {
+  display: flex;
+  justify-content: flex-end;
+}
+
+#controls #batchStarWrapper,
+#controls #clearResetWrapper {
+  width: 33%;
+}
+
+#controls #clearResetWrapper button {
+  background: transparent;
+  border: 1px solid #006600;
+  border-radius: 10px;
+  color: #006600;
+  padding: 5px 0;
+  width: 45%;
+}
+
+#controls #clearResetWrapper button:hover {
+  background: #EEEEEE;
+}
+
+#controls #clearResetWrapper button:active {
+  background: #F4F4F4;
+}
+
+#controls #batchStarWrapper button {
+  border: 1px solid #006600;
+  background: #006600;
+  border-radius: 10px;
+  color: white;
+  padding: 5px;
+  width: 100%;
+}
+
+#controls #batchStarWrapper button:hover {
+  background: #003D00;
+}
+
+#controls #batchStarWrapper button:active {
+  background: #339933;
+}
+
+.input-wrapper, .output-wrapper {
+  display: flex;
+  flex-direction: row;
+}
+
+label {
+  background-color: #f6f8fa;
+  font-family: monospace;
+  font-size: 12pt;
+}
+
+.input, .output, .documentation-input {
+  background-color: #f6f8fa;
+}
+
+.input-wrapper label {
+  margin: 7px 0;
+  padding: 5px 5px 5px 10px;
+}
+.input-wrapper .input,
+.output-wrapper .output {
+  flex-grow: 3;
+  margin: 7px 0;
+  padding: 5px;
+}
+
+.input {
+  border-left: 1px solid #333;
+  outline: none;
+}
+#content {
+  width: 100%;
+}
+#article {
+  margin: 0 15px 0 0;
+}
+#editor {
+  position: -webkit-sticky;
+  position: sticky;
+  align-self: start;
+  top: 20px;
+}
+.documentation-input {
+  min-height: 82pt;
+}
+header {
+	background: white;
+	display: grid;
+	align-items: center;
+}
+.bottom-nav {
+  display: grid;
+  grid-template-columns: 20% 60% 20%;
+  list-style: none;
+  padding: 0;
+  position: sticky;
+  bottom: 0;
+  background: white;
+}
+.bottom-nav li {
+  text-align: center;
+}
+.bottom-nav li.previous {
+  grid-column: 1;
+}
+.bottom-nav li.current {
+  grid-column: 2;
+  text-align-last: center;
+}
+.bottom-nav li.next {
+  grid-column: 3;
+}
+#0 {
+  display: unset;
+}
+select {
+  border: 0;
+  background: transparent;
+  color: #006600;
+  font-size: 14pt;
+  cursor: pointer;
+  max-width: 100%;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+}
+header {
+  grid-template-columns: 50% 50%;
+}
+#title {
+  padding-right: 15px;
+  text-align: right;
+}
+@media only screen and (min-width: 600px) {
+  #content {
+    display: grid;
+    grid-template-columns: 50% 50%;
+  }
+  #article {
+    grid-column: 1 / 2;
+  }
+  #editor {
+    grid-column: 2;
+  }
+  header {
+    width: 50%;
+  }
+}
+.DefName { color: #A900A9; font-weight: bold; }
+.Identifier { color: #008080; }
+.Constant { color: #c00000; }
+.Type { color: #008000; }
+.Special { color: #c000c0; }
+.Statement { color: #939303; font-weight: bold; }
+.Comment, .Comment > span { color: #008080 !important; font-weight: bold !important; }
