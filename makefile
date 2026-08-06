@@ -10,12 +10,26 @@ space := $(empty) $(empty)
 
 comma := ,
 
+.PHONY: all clean html fmt
+
 all: $(TARGET)
+
+# Generate the tutorial page from chapters/ in the order set by chapters-index.
+html: tour-of-clips.html
+
+tour-of-clips.html: build.sh chapters-index template/head.html template/tail.html $(wildcard chapters/*.md)
+	sh build.sh > $@
+
+# Reflow chapter prose to ~80 columns in place (leaves code fences/links intact).
+fmt:
+	@for f in chapters/*.md; do \
+		awk -f wrap-md.awk "$$f" > "$$f.tmp" && mv "$$f.tmp" "$$f"; \
+	done
 
 $(TARGET): $(CLIPS_DIR)/libclips.a
 	$(CC) $(CFLAGS) -I$(CLIPS_DIR) -L$(CLIPS_DIR) -lclips -o $@ \
 		--no-entry \
-		-sEXPORTED_FUNCTIONS='["_BatchStar","_CreateEnvironment","_DestroyEnvironment","_Eval","_malloc","_free"]' \
+		-sEXPORTED_FUNCTIONS='["_BatchStar","_CreateEnvironment","_DestroyEnvironment","_Eval","_Clear","_Reset","_malloc","_free"]' \
 		-sALLOW_TABLE_GROWTH=1
 
 $(CLIPS_DIR)/libclips.a:
