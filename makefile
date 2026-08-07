@@ -1,6 +1,13 @@
 TARGET    = clips.js
 CLIPS_DIR = vendor/clips
 
+# The CLIPS source arrives over the network from a SourceForge mirror and is
+# compiled straight into the wasm that gets deployed, so a substituted tarball
+# would end up in the published artifact unnoticed. Checking it on every build
+# also validates the copy CI restores from its cache.
+CLIPS_TARBALL = clips_core_source_642.tar.gz
+CLIPS_SHA256  = 608a1eb2fc6e9caff30d63d684095f0bca7108f2294d21ee6f5617427c10455a
+
 CC     = emcc
 CFLAGS = -O3
 
@@ -56,8 +63,9 @@ $(TARGET): $(CLIPS_DIR)/libclips.a makefile | check-emcc
 		-sALLOW_TABLE_GROWTH=1
 
 $(CLIPS_DIR)/libclips.a:
-	[ -e clips_core_source_642.tar.gz ] || wget https://sourceforge.net/projects/clipsrules/files/CLIPS/6.4.2/clips_core_source_642.tar.gz
-	[ -d "$(CLIPS_DIR)" ] || mkdir -p $(CLIPS_DIR) && tar --strip-components=2 -xvf clips_core_source_642.tar.gz -C $(CLIPS_DIR)
+	[ -e $(CLIPS_TARBALL) ] || wget https://sourceforge.net/projects/clipsrules/files/CLIPS/6.4.2/$(CLIPS_TARBALL)
+	echo "$(CLIPS_SHA256)  $(CLIPS_TARBALL)" | sha256sum -c -
+	[ -d "$(CLIPS_DIR)" ] || mkdir -p $(CLIPS_DIR) && tar --strip-components=2 -xvf $(CLIPS_TARBALL) -C $(CLIPS_DIR)
 	$(MAKE) -C $(CLIPS_DIR) CC=$(CC) CFLAGS="$(CFLAGS)"
 
 clean:

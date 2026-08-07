@@ -4,3 +4,8 @@ clips_core_source_642.tar.gz
 vendor
 tour-of-clips.html
 assets
+
+# editor leftovers - swap files carry undo history, including deleted text
+*.swp
+*.swo
+*~
