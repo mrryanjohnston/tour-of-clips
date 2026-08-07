@@ -106,25 +106,11 @@
                     }
               return pos; // needed because of recursion stuff
             }
-      function lengthBytesUTF8(str) {
-        var len = 0;
-        for (var i = 0; i < str.length; ++i) {
-          // Gotcha: charCodeAt returns a 16-bit word that is a UTF-16 encoded code unit, not a Unicode code point of the character! So decode UTF16->UTF32->UTF8.
-          // See http://unicode.org/faq/utf_bom.html#utf16-3
-          var u = str.charCodeAt(i); // possibly a lead surrogate
-          if (u >= 0xD800 && u <= 0xDFFF) u = 0x10000 + ((u & 0x3FF) << 10) | (str.charCodeAt(++i) & 0x3FF);
-          if (u <= 0x7F) ++len;
-          else if (u <= 0x7FF) len += 2;
-          else if (u <= 0xFFFF) len += 3;
-          else len += 4;
-        }
-        return len;
-      }
       /** @type {function(string, boolean=, number=)} */
       function intArrayFromString(stringy, dontAddNull, length) {
-        var len = length > 0 ? length : lengthBytesUTF8(stringy)+1;
+        var len = length > 0 ? length : Module.lengthBytesUTF8(stringy)+1;
         var u8array = new Array(len);
-        var numBytesWritten = stringToUTF8Array(stringy, u8array, 0, u8array.length);
+        var numBytesWritten = Module.stringToUTF8Array(stringy, u8array, 0, u8array.length);
         if (dontAddNull) u8array.length = numBytesWritten;
         return u8array;
       }
@@ -199,38 +185,38 @@
         ele.style.display = 'none';
       }
     </script>
-    <script src="./clips.js">
+    <script src="@CLIPS_JS_URL@">
     </script>
     <script>
       Module.onRuntimeInitialized = () => {
-              let clipsEnvironment = _CreateEnvironment();
+              let clipsEnvironment = Module._CreateEnvironment();
               document.getElementById('batchStar').addEventListener('click',
                       function(event) {
                               event.preventDefault();
                               document.getElementById('clips1-output').innerText = '';
                               let input = document.getElementById('clips1').innerText;
                               let filename = './clips.bat';
-                              let lengthBytes = lengthBytesUTF8(filename)+1;
-                              let cFilename = _malloc(lengthBytes);
-                              stringToUTF8(filename, cFilename, Infinity);
-                              FS.writeFile('./clips.bat', input);
-                              _BatchStar(clipsEnvironment, cFilename);
-                              _free(cFilename);
-                              FS.unlink('./clips.bat');
+                              let lengthBytes = Module.lengthBytesUTF8(filename)+1;
+                              let cFilename = Module._malloc(lengthBytes);
+                              Module.stringToUTF8(filename, cFilename, Infinity);
+                              Module.FS.writeFile('./clips.bat', input);
+                              Module._BatchStar(clipsEnvironment, cFilename);
+                              Module._free(cFilename);
+                              Module.FS.unlink('./clips.bat');
                             }
                     );
               document.getElementById('clear').addEventListener('click',
                       function(event) {
                               event.preventDefault();
                               document.getElementById('clips1-output').innerText = '';
-                              _Clear(clipsEnvironment);
+                              Module._Clear(clipsEnvironment);
                             }
                     );
               document.getElementById('reset').addEventListener('click',
                       function(event) {
                               event.preventDefault();
                               document.getElementById('clips1-output').innerText = '';
-                              _Reset(clipsEnvironment);
+                              Module._Reset(clipsEnvironment);
                             }
                     );
       }

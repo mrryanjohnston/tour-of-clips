@@ -2,10 +2,31 @@
 # Generate tour-of-clips.html from template/ + chapters/ in the order given by
 # chapters-index. Each chapters/<slug>.md holds one chapter (title, prose, and a
 # ```clips code sample); section numbering and the bottom-nav are derived here.
+# As a side effect this also stages assets/ : the content-addressed copies of
+# clips.js, clips.wasm and tour-of-clips.css that the emitted page points at.
 set -eu                 # abort on any error (-e) or use of an unset variable (-u)
 cd "$(dirname "$0")"    # run from the script's own dir so relative paths resolve
 
-cat template/head.html  # emit the static top of the page (head, header, opening divs)
+for f in clips.js clips.wasm tour-of-clips.css; do
+  [ -f "$f" ] || { echo "build.sh: missing $f (run 'make' first)" >&2; exit 1; }
+done
+
+# generate ids based on contents of the file
+# in order to avoid issues that could arise from old tour-of-clips.html files
+# referencing old versions of the engine or css
+ENGINE_ID=$(cat clips.js clips.wasm | sha256sum | cut -c1-12)
+CSS_ID=$(sha256sum tour-of-clips.css | cut -c1-12)
+
+rm -rf assets
+mkdir -p "assets/clips-$ENGINE_ID"
+cp clips.js clips.wasm "assets/clips-$ENGINE_ID/"
+cp tour-of-clips.css "assets/tour-of-clips.$CSS_ID.css"
+
+CLIPS_JS_URL="/assets/clips-$ENGINE_ID/clips.js"
+CSS_URL="/assets/tour-of-clips.$CSS_ID.css"
+
+# emit the static top of the page (head, header, opening divs)
+sed "s|@CSS_URL@|$CSS_URL|" template/head.html
 awk '
 # trim(): strip leading and trailing whitespace from a string and return it.
 function trim(s){ sub(/^[ \t]+/,"",s); sub(/[ \t]+$/,"",s); return s }
@@ -118,4 +139,5 @@ BEGIN{
   for(i=0;i<N;i++) render(i)                     # pass 2: render every section in order
 }
 '
-cat template/tail.html  # emit the static bottom of the page (shared editor panel + scripts)
+# emit the static bottom of the page (shared editor panel + scripts)
+sed "s|@CLIPS_JS_URL@|$CLIPS_JS_URL|" template/tail.html

@@ -1,0 +1,144 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Never let two deploys race for the same objects.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned, never "latest", and read from the same file the makefile reads,
+      # so a local build and a CI build cannot drift apart. The emcc version
+      # decides the generated glue and so the content hash in the asset urls.
+      - name: Read pinned emscripten version
+        run: echo "EMSDK_VERSION=$(cat .emscripten-version)" >> "$GITHUB_ENV"
+
+      # The CLIPS tarball comes from a SourceForge mirror and libclips.a is the
+      # slow part of the build; caching both keeps a flaky mirror off the
+      # critical path. Keyed on the makefile, which holds the compile flags.
+      - name: Cache CLIPS source and objects
+        uses: actions/cache@v4
+        with:
+          path: |
+            clips_core_source_642.tar.gz
+            vendor/clips
+          key: clips-${{ runner.os }}-emsdk${{ env.EMSDK_VERSION }}-${{ hashFiles('makefile') }}
+
+      # Both the compiler and the installer are pinned. emsdk-version would
+      # default to the emscripten version anyway, but stating it keeps the pin
+      # from resting on that fallback - emsdk is tagged in lockstep with
+      # emscripten releases, so one version string names both.
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          emsdk-version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: emsdk-${{ env.EMSDK_VERSION }}
+
+      - name: Build engine
+        run: make
+
+      - name: Smoke test
+        run: node ci/smoke-test.js
+
+      # Also stages assets/ with the content-addressed copies the page links to.
+      - name: Build page
+        run: make html
+
+      - name: Show published paths
+        run: find assets -type f | sort
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: |
+            tour-of-clips.html
+            assets/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write # for the OIDC token exchanged for the AWS role
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Immutable and content-addressed, so they can be cached for a year and
+      # never need invalidating. Uploaded BEFORE the page, so the page never
+      # references an object that is not there yet.
+      #
+      # Note there is no --delete anywhere in this job, by design: this bucket
+      # holds the whole site, and older builds have to stay reachable for
+      # visitors still holding an older cached copy of the page.
+      - name: Upload assets
+        env:
+          BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          IMMUTABLE='public, max-age=31536000, immutable'
+          # Explicit --content-type per extension: S3 would tag .wasm as
+          # binary/octet-stream, which drops emscripten off the
+          # instantiateStreaming path.
+          aws s3 cp assets/ "s3://$BUCKET/assets/" --recursive \
+            --exclude '*' --include '*.wasm' \
+            --content-type 'application/wasm' \
+            --cache-control "$IMMUTABLE"
+          aws s3 cp assets/ "s3://$BUCKET/assets/" --recursive \
+            --exclude '*' --include '*.js' \
+            --content-type 'text/javascript; charset=utf-8' \
+            --cache-control "$IMMUTABLE"
+          aws s3 cp assets/ "s3://$BUCKET/assets/" --recursive \
+            --exclude '*' --include '*.css' \
+            --content-type 'text/css; charset=utf-8' \
+            --cache-control "$IMMUTABLE"
+
+      # The only mutable object, and so the only one that can go stale. Short
+      # max-age because an invalidation clears CloudFront's edge caches but not
+      # browsers': a long TTL here would strand returning visitors on old html
+      # that no invalidation can reach.
+      - name: Upload page
+        env:
+          BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 cp tour-of-clips.html "s3://$BUCKET/tour-of-clips.html" \
+            --content-type 'text/html; charset=utf-8' \
+            --cache-control 'public, max-age=60, must-revalidate'
+
+      # One path, because the assets are addressed by content. Waiting on it
+      # makes a green check mean "live" rather than "accepted".
+      - name: Invalidate page
+        env:
+          DIST: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          ID=$(aws cloudfront create-invalidation \
+                --distribution-id "$DIST" \
+                --paths /tour-of-clips.html \
+                --query 'Invalidation.Id' --output text)
+          echo "invalidation $ID"
+          aws cloudfront wait invalidation-completed --distribution-id "$DIST" --id "$ID"
